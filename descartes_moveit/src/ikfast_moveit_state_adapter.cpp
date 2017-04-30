@@ -22,7 +22,7 @@
 #include <ros/node_handle.h>
 
 const static std::string default_base_frame = "base_link";
-const static std::string default_tool_frame = "tool0";
+const static std::string default_tool_frame = "tool_tip";
 
 // Compute the 'joint distance' between two poses
 static double distance(const std::vector<double>& a, const std::vector<double>& b)
