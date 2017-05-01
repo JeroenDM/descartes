@@ -124,8 +124,6 @@ protected:
 
   mutable planning_scene::PlanningScenePtr planning_scene_;
 
-  planning_scene::PlanningScenePtr planning_scene_;
-
   robot_model::RobotModelConstPtr robot_model_ptr_;
 
   robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
