@@ -130,6 +130,9 @@ bool MoveitStateAdapter::initialize(robot_model::RobotModelConstPtr robot_model,
     Eigen::Affine3d root_to_world = robot_state_->getFrameTransform(world_frame_);
     world_to_root_ = descartes_core::Frame(root_to_world.inverse());
   }
+  // create monitor and immediately retrieve up-to-date planning scene copy
+  planning_scene_monitor_ = boost::make_shared<planning_scene_monitor::PlanningSceneMonitor>("robot_description");
+  updateInternals();
 
   return true;
 }
@@ -320,6 +323,26 @@ bool MoveitStateAdapter::isValidMove(const std::vector<double>& from_joint_pose,
     if (dtheta > max_dtheta)
       return false;
   }
+
+  return true;
+}
+
+bool MoveitStateAdapter::updateInternals() const
+{
+  logInform("updateInternals: updating internals");
+
+  planning_scene_monitor_->requestPlanningSceneState();
+  planning_scene_monitor::LockedPlanningSceneRW psm_lpsrw(planning_scene_monitor_);
+  psm_lpsrw->getCurrentStateNonConst().update();
+
+  planning_scene_ = psm_lpsrw->diff();
+  planning_scene_->decoupleParent();
+
+  logInform("updateInternals: updated");
+
+  //planning_scene_->printKnownObjects(std::cout);
+
+  logInform("updateInternals: done");
 
   return true;
 }
