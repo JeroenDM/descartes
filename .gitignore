@@ -24,6 +24,9 @@
 .cproject
 .project
 
+# vscode
+.vscode
+
 # build
 devel/
 
