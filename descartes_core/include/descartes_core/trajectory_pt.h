@@ -140,6 +140,10 @@ public:
   virtual void getJointPoses(const RobotModel &model, std::vector<std::vector<double> > &joint_poses) const = 0;
   /** @} (end section) */
 
+  virtual void getJointPoses(const descartes_core::RobotModel &model,
+                             std::vector<std::vector<double> > &joint_poses,
+                             std::vector<double> &costs) const = 0;
+
   /**@brief Check if state satisfies trajectory point requirements.
    * @param model Robot model  object used to determine validity
    */
@@ -221,9 +225,20 @@ public:
     timing_ = timing;
   }
 
+  double getWeldingCost() const
+  {
+    return weldingCost;
+  }
+
+  void setWeldingCost(double newCost)
+  {
+    weldingCost = newCost;
+  }
+
 protected:
   ID id_; /**<@brief ID associated with this pt. Generally refers back to a process path defined elsewhere. */
   TimingConstraint timing_; /**<@brief Information specifying acceptable timing from this point to the next. */
+  double weldingCost = 0.0;
 };
 
 } /* namespace descartes_core */

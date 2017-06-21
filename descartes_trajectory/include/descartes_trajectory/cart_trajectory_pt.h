@@ -50,15 +50,22 @@ struct ToleranceBase
   static T createSymmetric(double x, double y, double z, double x_tol, double y_tol, double z_tol)
   {
     double x_lower = x - x_tol / 2.0;
+    double x_rel_lower = - (x_tol / 2.0);
     double x_upper = x + x_tol / 2.0;
+    double x_rel_upper = x_tol / 2.0;
 
     double y_lower = y - y_tol / 2.0;
+    double y_rel_lower = - (y_tol / 2.0);
     double y_upper = y + y_tol / 2.0;
+    double y_rel_upper = y_tol / 2.0;
 
     double z_lower = z - z_tol / 2.0;
+    double z_rel_lower = - (z_tol / 2.0);
     double z_upper = z + z_tol / 2.0;
+    double z_rel_upper = z_tol / 2.0;
 
-    return (T(x_lower, x_upper, y_lower, y_upper, z_lower, z_upper));
+    return (T(x_lower, x_upper, y_lower, y_upper, z_lower, z_upper, 
+            x_rel_lower, x_rel_upper, y_rel_lower, y_rel_upper, z_rel_lower, z_rel_upper));
   }
 
   /**
@@ -85,7 +92,7 @@ struct ToleranceBase
   /**
     @brief Default constructor, all upper/lower limits initialized to 0
     */
-  ToleranceBase() : x_upper(0.), y_upper(0.), z_upper(0.), x_lower(0.), y_lower(0.), z_lower(0.)
+  ToleranceBase() : x_upper(0.), y_upper(0.), z_upper(0.), x_lower(0.), y_lower(0.), z_lower(0.), x_rel_lower(0.), x_rel_upper(0.), y_rel_lower(0.), y_rel_upper(0.), z_rel_lower(0.), z_rel_upper(0.)
   {
   }
 
@@ -108,12 +115,35 @@ struct ToleranceBase
     ROS_DEBUG_STREAM("Initializing z tolerance (lower/upper)" << z_lower << "/" << z_upper);
   }
 
+  ToleranceBase(double x_lower_lim, double x_upper_lim, double y_lower_lim, double y_upper_lim, double z_lower_lim,
+                double z_upper_lim, double x_rel_lower_lim, double x_rel_upper_lim, double y_rel_lower_lim, double y_rel_upper_lim, double z_rel_lower_lim, double z_rel_upper_lim)
+    : x_upper(x_upper_lim)
+    , y_upper(y_upper_lim)
+    , z_upper(z_upper_lim)
+    , x_lower(x_lower_lim)
+    , y_lower(y_lower_lim)
+    , z_lower(z_lower_lim)
+    , x_rel_lower(x_rel_lower_lim)
+    , x_rel_upper(x_rel_upper_lim)
+    , y_rel_lower(y_rel_lower_lim)
+    , y_rel_upper(y_rel_upper_lim)
+    , z_rel_lower(z_rel_lower_lim)
+    , z_rel_upper(z_rel_upper_lim)
+  {
+    ROS_DEBUG_STREAM("Creating fully defined Tolerance(base type)");
+    ROS_DEBUG_STREAM("Initializing x tolerance (lower/upper)" << x_lower << "/" << x_upper);
+    ROS_DEBUG_STREAM("Initializing y tolerance (lower/upper)" << y_lower << "/" << y_upper);
+    ROS_DEBUG_STREAM("Initializing z tolerance (lower/upper)" << z_lower << "/" << z_upper);
+  }
+
   void clear()
   {
     x_upper = y_upper = z_upper = x_lower = y_lower = z_lower = 0.;
+    x_rel_upper = y_rel_upper = z_rel_upper = x_rel_lower = y_rel_lower = z_rel_lower = 0.;
   }
 
   double x_upper, y_upper, z_upper, x_lower, y_lower, z_lower;
+  double x_rel_upper, y_rel_upper, z_rel_upper, x_rel_lower, y_rel_lower, z_rel_lower;
 };
 
 /**@brief Description of a per-cartesian-axis linear tolerance on position
@@ -131,6 +161,15 @@ struct PositionTolerance : public ToleranceBase
   {
     ROS_DEBUG_STREAM("Created fully defined Position Tolerance");
   }
+
+  PositionTolerance(double x_lower_lim, double x_upper_lim, double y_lower_lim, double y_upper_lim, double z_lower_lim,
+                    double z_upper_lim, double x_rel_lower_lim, double x_rel_upper_lim, double y_rel_lower_lim, double y_rel_upper_lim,
+                    double z_rel_lower_lim, double z_rel_upper_lim)
+    : ToleranceBase(x_lower_lim, x_upper_lim, y_lower_lim, y_upper_lim, z_lower_lim, z_upper_lim,
+                    x_rel_lower_lim, x_rel_upper_lim, y_rel_lower_lim, y_rel_upper_lim, z_rel_lower_lim, z_rel_upper_lim)
+  {
+    ROS_DEBUG_STREAM("Created fully defined Position Tolerance");
+  }
 };
 
 /**@brief Description of a per-axis rotational tolerance on orientation
@@ -145,6 +184,15 @@ struct OrientationTolerance : public ToleranceBase
   OrientationTolerance(double x_lower_lim, double x_upper_lim, double y_lower_lim, double y_upper_lim,
                        double z_lower_lim, double z_upper_lim)
     : ToleranceBase(x_lower_lim, x_upper_lim, y_lower_lim, y_upper_lim, z_lower_lim, z_upper_lim)
+  {
+    ROS_DEBUG_STREAM("Created fully defined Orientation Tolerance");
+  }
+
+  OrientationTolerance(double x_lower_lim, double x_upper_lim, double y_lower_lim, double y_upper_lim, double z_lower_lim,
+                      double z_upper_lim, double x_rel_lower_lim, double x_rel_upper_lim, double y_rel_lower_lim, double y_rel_upper_lim,
+                      double z_rel_lower_lim, double z_rel_upper_lim)
+    : ToleranceBase(x_lower_lim, x_upper_lim, y_lower_lim, y_upper_lim, z_lower_lim, z_upper_lim,
+                    x_rel_lower_lim, x_rel_upper_lim, y_rel_lower_lim, y_rel_upper_lim, z_rel_lower_lim, z_rel_upper_lim)
   {
     ROS_DEBUG_STREAM("Created fully defined Orientation Tolerance");
   }
@@ -281,6 +329,10 @@ public:
   // TODO complete
   virtual void getJointPoses(const descartes_core::RobotModel &model,
                              std::vector<std::vector<double> > &joint_poses) const;
+
+  virtual void getJointPoses(const descartes_core::RobotModel &model,
+                             std::vector<std::vector<double> > &joint_poses,
+                             std::vector<double> &costs) const;
   /** @} (end section) */
 
   // TODO complete
@@ -311,6 +363,7 @@ public:
 
 protected:
   bool computeCartesianPoses(EigenSTL::vector_Affine3d &poses) const;
+  double computeWeldingCost(Eigen::Affine3d referencePose, Eigen::Affine3d pose) const;
 
 protected:
   descartes_core::Frame tool_base_; /**<@brief Fixed transform from wrist/tool_plate to tool base. */

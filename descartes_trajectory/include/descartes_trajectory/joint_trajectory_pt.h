@@ -133,6 +133,10 @@ public:
                              std::vector<std::vector<double> > &joint_poses) const;
   /** @} (end section) */
 
+  virtual void getJointPoses(const descartes_core::RobotModel &model,
+                             std::vector<std::vector<double> > &joint_poses,
+                             std::vector<double> &costs) const;
+
   // TODO complete
   virtual bool isValid(const descartes_core::RobotModel &model) const;
 

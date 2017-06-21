@@ -97,6 +97,11 @@ public:
    *        'initialize()'.
    */
   void setState(const moveit::core::RobotState &state);
+  
+  /*void setCheckCollisions(bool set_collisions)
+  {
+  	descartes_core::RobotModel::setCheckCollisions(set_collisions);
+  }*/
 
 protected:
   /**

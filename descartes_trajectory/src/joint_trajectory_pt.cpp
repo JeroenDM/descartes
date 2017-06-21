@@ -122,6 +122,15 @@ void JointTrajectoryPt::getJointPoses(const RobotModel &model, std::vector<std::
   getNominalJointPose(empty_seed, model, joint_poses[0]);
 }
 
+void JointTrajectoryPt::getJointPoses(const descartes_core::RobotModel &model, std::vector<std::vector<double> > &joint_poses, std::vector<double> &costs) const
+{
+  std::vector<double> empty_seed;
+  joint_poses.resize(1);
+  getNominalJointPose(empty_seed, model, joint_poses[0]);
+  costs.resize(1);
+  costs[0] = weldingCost;
+}
+
 bool JointTrajectoryPt::isValid(const RobotModel &model) const
 {
   return model.isValid(lower_) && model.isValid(upper_);

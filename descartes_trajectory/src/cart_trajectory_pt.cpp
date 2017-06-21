@@ -30,6 +30,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include "descartes_trajectory/cart_trajectory_pt.h"
 #include <descartes_core/utils.h>
+#include <cmath>
 
 #define NOT_IMPLEMENTED_ERR(ret)                                                                                       \
   logError("%s not implemented", __PRETTY_FUNCTION__);                                                                 \
@@ -48,7 +49,7 @@ EigenSTL::vector_Affine3d uniform(const TolerancedFrame &frame, const double ori
 
   if (pos_increment < 0.0 || orient_increment < 0.0)
   {
-    ROS_WARN_STREAM("Negative position/orientation intcrement: " << pos_increment << "/" << orient_increment);
+    ROS_WARN_STREAM("Negative position/orientation increment: " << pos_increment << "/" << orient_increment);
     rtn.clear();
     return rtn;
   }
@@ -60,9 +61,9 @@ EigenSTL::vector_Affine3d uniform(const TolerancedFrame &frame, const double ori
 
   if (orient_increment > 0)
   {
-    nrx = ((frame.orientation_tolerance.x_upper - frame.orientation_tolerance.x_lower) / orient_increment) + 1;
-    nry = ((frame.orientation_tolerance.y_upper - frame.orientation_tolerance.y_lower) / orient_increment) + 1;
-    nrz = ((frame.orientation_tolerance.z_upper - frame.orientation_tolerance.z_lower) / orient_increment) + 1;
+    nrx = ((frame.orientation_tolerance.x_rel_upper - frame.orientation_tolerance.x_rel_lower) / orient_increment) + 1;
+    nry = ((frame.orientation_tolerance.y_rel_upper - frame.orientation_tolerance.y_rel_lower) / orient_increment) + 1;
+    nrz = ((frame.orientation_tolerance.z_rel_upper - frame.orientation_tolerance.z_rel_lower) / orient_increment) + 1;
   }
   else
   {
@@ -94,29 +95,30 @@ EigenSTL::vector_Affine3d uniform(const TolerancedFrame &frame, const double ori
 
   for (size_t ii = 0; ii < nrx; ++ii)
   {
-    rx = frame.orientation_tolerance.x_lower + orient_increment * ii;
+    rx = frame.orientation_tolerance.x_rel_lower + orient_increment * ii;
     for (size_t jj = 0; jj < nry; ++jj)
     {
-      ry = frame.orientation_tolerance.y_lower + orient_increment * jj;
+      ry = frame.orientation_tolerance.y_rel_lower + orient_increment * jj;
       for (size_t kk = 0; kk < nrz; ++kk)
       {
-        rz = frame.orientation_tolerance.z_lower + orient_increment * kk;
+        rz = frame.orientation_tolerance.z_rel_lower + orient_increment * kk;
         for (size_t ll = 0; ll < ntx; ++ll)
         {
-          tx = frame.position_tolerance.x_lower + pos_increment * ll;
+          tx = frame.position_tolerance.x_rel_lower + pos_increment * ll;
           for (size_t mm = 0; mm < nty; ++mm)
           {
-            ty = frame.position_tolerance.y_lower + pos_increment * mm;
+            ty = frame.position_tolerance.y_rel_lower + pos_increment * mm;
             for (size_t nn = 0; nn < ntz; ++nn)
             {
-              tz = frame.position_tolerance.z_lower + pos_increment * nn;
+              tz = frame.position_tolerance.z_rel_lower + pos_increment * nn;
 
               /*              sampled_frame = Eigen::Translation3d(tx,ty,tz) *
                                 Eigen::AngleAxisd(rx, Eigen::Vector3d::UnitX()) *
                                 Eigen::AngleAxisd(ry, Eigen::Vector3d::UnitY()) *
                                 Eigen::AngleAxisd(rz, Eigen::Vector3d::UnitZ());*/
               sampled_frame =
-                  descartes_core::utils::toFrame(tx, ty, tz, rx, ry, rz, descartes_core::utils::EulerConventions::XYZ);
+                  descartes_core::utils::toLocalFrame(frame.frame, tx, ty, tz, rx, ry, rz, descartes_core::utils::EulerConventions::XYZ);
+              sampled_frame = frame.frame * sampled_frame;
               rtn.push_back(sampled_frame);
             }
           }
@@ -231,6 +233,59 @@ bool CartTrajectoryPt::computeCartesianPoses(EigenSTL::vector_Affine3d &poses) c
   }
 
   return !poses.empty();
+}
+
+double CartTrajectoryPt::computeWeldingCost(Eigen::Affine3d referencePose, Eigen::Affine3d pose) const
+{
+  /*
+  Poses are supposed to only differ in rotation matrix, the translations should be the same,
+  unless a certain position tolerance is used.
+  The reference pose is supposed to be the optimal solution, any extra rotations will result in cost increase.
+  Because of the convention used, there are two welding angles:
+    1) rotation around the local Y-axis, the most critical rotation in terms of weld quality
+    2) rotation around the local X-axis
+
+  The problem now is to find those angles given a reference pose and a new, rotated 'pose'.
+  Method: we calculate the Z-axis of the rotated 'pose'.
+  Then this Z-axis is projected onto the X-Z-plane of the reference pose. Call this vector 'projectionZ'.
+  This projectionZ can then be used to calculate the Y- and X-rotation-angles, using vector dot products:
+    1) the dot product between 'projectionZ' and the Z-axis of the referencepose defines the Y-rotation-angle
+    2) the dot product between 'projectionZ' and the Z-axis of the rotated 'pose' defines the X-rotation-angle.
+  */
+  double costFactorX = 1.0;
+  double costFactorY = 10.0;
+  double cost;
+  
+  //Since translations are supposed to be the same, the result is supposed to be a rotation only transform
+  
+  Eigen::Vector3d zeroVec(0.0,0.0,0.0);
+  pose.translation() = zeroVec;
+  referencePose.translation() = zeroVec;
+
+  //We transform the 'pose' with the inverse of the referencePose transform:
+  Eigen::Affine3d revertedPose;
+  revertedPose = referencePose.inverse() * pose;
+  //This 'revertedPose' transform now represents a rotation of the origin frame.
+  //The reference frame is now the origin frame:
+  //referencePose = referencePose.inverse() * referencePose; //Should be identity; this step is actually useless
+
+  //Calculate Z-axis of pose- and referenceframe:
+  Eigen::Vector3d axisZ(0.0,0.0,1.0);
+  Eigen::Vector3d poseZ;
+  poseZ = revertedPose * axisZ;
+
+  //To calculate the projection of poseZ in the X-Z-plane of the reference frame we set its Y-component to zero:
+  //We can do this because the referencePose transform is now an identity transform.
+  Eigen::Vector3d projectionZ(poseZ[0], 0.0, poseZ[2]);
+
+
+  //Now calculate the rotation angles using dot products:
+  double xRotation, yRotation;
+  yRotation = acos(axisZ.dot(projectionZ) / projectionZ.norm());
+  xRotation = acos(poseZ.dot(projectionZ) / (poseZ.norm() * projectionZ.norm()));
+
+  cost = costFactorX * std::abs(xRotation) + costFactorY * std::abs(yRotation);
+  return cost;
 }
 
 void CartTrajectoryPt::getCartesianPoses(const RobotModel &model, EigenSTL::vector_Affine3d &poses) const
@@ -383,6 +438,49 @@ void CartTrajectoryPt::getJointPoses(const RobotModel &model, std::vector<std::v
       if (model.getAllIK(pose, local_joint_poses))
       {
         joint_poses.insert(joint_poses.end(), local_joint_poses.begin(), local_joint_poses.end());
+      }
+    }
+  }
+  else
+  {
+    ROS_ERROR("Failed for find ANY cartesian poses");
+  }
+
+  if (joint_poses.empty())
+  {
+    ROS_WARN("Failed for find ANY joint poses, returning");
+  }
+  else
+  {
+    ROS_DEBUG_STREAM("Get joint poses, sampled: " << poses.size() << ", with " << joint_poses.size()
+                                                  << " valid(returned) poses");
+  }
+}
+
+void CartTrajectoryPt::getJointPoses(const descartes_core::RobotModel &model, std::vector<std::vector<double> > &joint_poses, std::vector<double> &costs) const
+{
+  joint_poses.clear();
+
+  EigenSTL::vector_Affine3d poses;
+  if (computeCartesianPoses(poses))
+  {
+    poses.reserve(poses.size());
+    costs.reserve(poses.size());
+    Eigen::Affine3d referencePose = wobj_base_.frame * wobj_pt_.frame * tool_pt_.frame_inv * tool_base_.frame_inv;
+    for (const auto &pose : poses)
+    {
+      std::vector<std::vector<double> > local_joint_poses;
+      if (model.getAllIK(pose, local_joint_poses))
+      {
+        joint_poses.insert(joint_poses.end(), local_joint_poses.begin(), local_joint_poses.end());
+        //For every joint solution found we need to add the cost once:
+        int counter = 0;
+        while(counter < local_joint_poses.size())
+        {
+          costs.push_back(computeWeldingCost(referencePose, pose));
+          ++counter;
+        }
+
       }
     }
   }

@@ -36,7 +36,7 @@ public:
 
   // Helper functions meant to access the underlying graph structure
 
-  const PlanningGraph& getPlanningGraph() const
+  /*const*/ PlanningGraph& getPlanningGraph() const
   {
     return *planning_graph_;
   }

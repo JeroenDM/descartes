@@ -88,6 +88,12 @@ descartes_core::RobotModelConstPtr PlanningGraph::getRobotModel()
 
 bool PlanningGraph::insertGraph(const std::vector<TrajectoryPtPtr>* points)
 {
+  // this is considered the START OF PHASE 1: IK calculations (and collision checking!)
+  // for all cartesian trajectory points
+  // (But there is already some graph overhead here)
+  double phase1StartTime = ros::Time::now().toSec();
+  ROS_INFO_STREAM("<planning_graph.cpp> Start of phase 1");
+
   // validate input
   if (!points)
   {
@@ -147,6 +153,15 @@ bool PlanningGraph::insertGraph(const std::vector<TrajectoryPtPtr>* points)
     return false;
   }
 
+  // END OF PHASE 1
+  double phase1Time = ros::Time::now().toSec() - phase1StartTime;
+  ROS_INFO_STREAM("<planning_graph.cpp> Phase 1: " << phase1Time << " seconds.");
+  // this is considered the START OF PHASE 2: calculating the cost and adding edges and vertices to the graph.
+  double phase2StartTime = ros::Time::now().toSec();
+  ROS_INFO_STREAM("<planning_graph.cpp> Start of phase 2");
+
+  ROS_INFO_STREAM("Calculating edge weights.");
+
   std::vector<JointEdge> edges;
   if (!calculateAllEdgeWeights(poses, edges))
   {
@@ -154,11 +169,15 @@ bool PlanningGraph::insertGraph(const std::vector<TrajectoryPtPtr>* points)
     return false;
   }
 
+  ROS_INFO_STREAM("Finished calculating edge weights.");
+
   if (!populateGraphVertices(*points, poses))
   {
     ROS_ERROR_STREAM("unable to populate graph from input points");
     return false;
   }
+
+  ROS_INFO_STREAM("Finished populating graphvertices.");
 
   // from list of joint trajectories (vertices) and edges (edges), construct the actual graph
   if (!populateGraphEdges(edges))
@@ -166,6 +185,13 @@ bool PlanningGraph::insertGraph(const std::vector<TrajectoryPtPtr>* points)
     ROS_ERROR_STREAM("unable to populate graph from calculated edges");
     return false;
   }
+
+  ROS_INFO_STREAM("Finished populating graph edges.");
+
+  // END OF PHASE 2
+  double phase2Time = ros::Time::now().toSec() - phase2StartTime;
+  ROS_INFO_STREAM("<planning_graph.cpp> Phase 2: " << phase2Time << " seconds.");
+  // phase 3 is outside this function in dense_planner.cpp (or sparse planner...)
 
   return true;
 }
@@ -812,12 +838,17 @@ void PlanningGraph::printGraph()
 bool PlanningGraph::calculateJointSolutions(const std::vector<TrajectoryPtPtr>& points,
                                             std::vector<std::vector<JointTrajectoryPt>>& poses)
 {
+  ROS_INFO_STREAM("Calculating joint solutions.");
+  double seconds = ros::Time::now().toSec();
   poses.resize(points.size());
-
   for (std::size_t i = 0; i < points.size(); ++i)
   {
     std::vector<std::vector<double>> joint_poses;
-    points[i]->getJointPoses(*robot_model_, joint_poses);
+    std::vector<double> weldingCosts;
+    points[i]->getJointPoses(*robot_model_, joint_poses, weldingCosts);
+
+    ROS_INFO_STREAM("Calculated point " << i + 1 << "/" << points.size() << ". Time passed: " << ros::Time::now().toSec() - seconds << " seconds.");
+    seconds = ros::Time::now().toSec();
 
     if (joint_poses.empty())
     {
@@ -826,9 +857,12 @@ bool PlanningGraph::calculateJointSolutions(const std::vector<TrajectoryPtPtr>& 
     }
 
     poses[i].reserve(joint_poses.size());
+    int counter = 0;
     for (auto& sol : joint_poses)
     {
       poses[i].emplace_back(std::move(sol), points[i]->getTiming());
+      poses[i].back().setWeldingCost(weldingCosts[counter]);
+      ++counter;
     }
   }
 
@@ -935,6 +969,11 @@ bool PlanningGraph::calculateEdgeWeights(const std::vector<JointTrajectoryPt>& s
       edge.joint_end = end_joint.getID();
       edge.transition_cost = edge_result.second;
       edge_results.push_back(edge);
+      if(edge_result.second < 0)
+      {
+        ROS_INFO_STREAM("Calculated negative edge weight: " << edge_result.second);
+      }
+      
     }
   }
 
@@ -1043,7 +1082,12 @@ PlanningGraph::EdgeWeightResult PlanningGraph::edgeWeight(const JointTrajectoryP
         double joint_diff = std::abs(end_vector[i] - start_vector[i]);
         vector_diff += joint_diff;
       }
-      result.second = vector_diff;
+      //Add extra weldingcost
+      if(useWeldingCost)
+      {
+        result.second = vector_diff + end.getWeldingCost() * weldingCostFactor;
+      }
+
     }
 
     result.first = true;

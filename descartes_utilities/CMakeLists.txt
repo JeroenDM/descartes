@@ -11,7 +11,6 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES descartes_utilities
   CATKIN_DEPENDS descartes_core descartes_trajectory trajectory_msgs
-  # DEPENDS eigen
 )
 
 include_directories(

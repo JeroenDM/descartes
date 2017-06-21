@@ -145,12 +145,36 @@ public:
   /** @brief simple function to iterate over all graph vertices to find ones that do not have an outgoing edge */
   bool findEndVertices(std::vector<JointGraph::vertex_descriptor> &end_points) const;
 
+  bool getUseWeldingCost()
+  {
+    return useWeldingCost;
+  }
+
+  void setUseWeldingCost(bool tempBool)
+  {
+    useWeldingCost = tempBool;
+  }
+
+  double getWeldingCostFactor()
+  {
+    return weldingCostFactor;
+  }
+
+  double setWeldingCostFactor(double newFactor)
+  {
+    weldingCostFactor = newFactor;
+  }
+
 protected:
   descartes_core::RobotModelConstPtr robot_model_;
 
   CostFunction custom_cost_function_;
 
   JointGraph dg_;
+
+  bool useWeldingCost = true;
+
+  double weldingCostFactor = 1.0;
 
   int recalculateJointSolutionsVertexMap(
       std::map<descartes_core::TrajectoryPt::ID, JointGraph::vertex_descriptor> &joint_vertex_map) const;

@@ -130,8 +130,8 @@ public:
    */
   virtual bool isValidMove(const std::vector<double> &from_joint_pose, const std::vector<double> &to_joint_pose,
                            double dt) const = 0;
-  
-  virtual bool updateInternals() const {}
+
+virtual bool updateInternals() const {}
 
 protected:
   RobotModel() : check_collisions_(false)
