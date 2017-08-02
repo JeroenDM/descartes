@@ -1031,6 +1031,12 @@ PlanningGraph::EdgeWeightResult PlanningGraph::edgeWeight(const JointTrajectoryP
       return result;
     }
 
+    // check to see if the start and end joint solution belong to
+    // the same robot configuration space
+    // int cfx;
+    // cfx = start.getConfigurationIndex();
+    // ROS_INFO_STREAM("Configuration index start: " << cfx);
+
     if (custom_cost_function_)
     {
       result.second = custom_cost_function_(start_vector, end_vector);

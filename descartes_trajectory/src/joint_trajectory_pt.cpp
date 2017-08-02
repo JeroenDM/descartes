@@ -122,6 +122,11 @@ void JointTrajectoryPt::getJointPoses(const RobotModel &model, std::vector<std::
   getNominalJointPose(empty_seed, model, joint_poses[0]);
 }
 
+int JointTrajectoryPt::getConfigurationIndex()
+{
+  return 99;
+}
+
 bool JointTrajectoryPt::isValid(const RobotModel &model) const
 {
   return model.isValid(lower_) && model.isValid(upper_);

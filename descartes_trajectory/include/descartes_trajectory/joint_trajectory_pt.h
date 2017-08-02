@@ -136,6 +136,10 @@ public:
   // TODO complete
   virtual bool isValid(const descartes_core::RobotModel &model) const;
 
+  /** @brief Get the configuration index of the joint pose from paper HC Fang SK Ong and dAYC Nee
+  * "Robot path planning opitmization for welding complex joints" */
+  int getConfigurationIndex();
+
   // TODO complete
   /**@brief Set discretization. Each joint can have a different discretization.
    * @param discretization Vector of discretization values. If length=1, set all elements of discretization_ are set to
