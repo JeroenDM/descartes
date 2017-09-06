@@ -413,4 +413,13 @@ bool CartTrajectoryPt::setDiscretization(const std::vector<double> &discretizati
   NOT_IMPLEMENTED_ERR(false);
 }
 
+double CartTrajectoryPt::computeCost(Eigen::Affine3d &nominalPose, Eigen::Affine3d &endEffectorPose)
+{
+  // convert poses to rotation matrices
+  Eigen::Matrix3d Ree = endEffectorPose.rotation();
+  Eigen::Matrix3d Rp  = nominalPose.rotation();
+
+  return 0.0;
+}
+
 } /* namespace descartes_trajectory */

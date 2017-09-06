@@ -311,6 +311,7 @@ public:
 
 protected:
   bool computeCartesianPoses(EigenSTL::vector_Affine3d &poses) const;
+  double computeCost(Eigen::Affine3d &nominalPose, Eigen::Affine3d &endEffectorPose);
 
 protected:
   descartes_core::Frame tool_base_; /**<@brief Fixed transform from wrist/tool_plate to tool base. */
