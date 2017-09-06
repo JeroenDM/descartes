@@ -221,9 +221,20 @@ public:
     timing_ = timing;
   }
 
+  void setCost(double newCost)
+  {
+    cost_ = newCost;
+  }
+
+  double getCost()
+  {
+    return cost_;
+  }
+
 protected:
   ID id_; /**<@brief ID associated with this pt. Generally refers back to a process path defined elsewhere. */
   TimingConstraint timing_; /**<@brief Information specifying acceptable timing from this point to the next. */
+  double cost_; /**@brief Trajectory point cost that can be added to the edge cost before graph search. */
 };
 
 } /* namespace descartes_core */
