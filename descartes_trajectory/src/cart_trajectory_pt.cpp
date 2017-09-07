@@ -449,10 +449,12 @@ void CartTrajectoryPt::getJointPoses(const descartes_core::RobotModel &model, st
       {
         joint_poses.insert(joint_poses.end(), local_joint_poses.begin(), local_joint_poses.end());
         //For every joint solution found we need to add the cost once:
+        // But it has to be calculated only once for every cartesian sampled frame
+        double localWeldingCost = computeWeldingCost(referencePose, pose);
         int counter = 0;
         while(counter < local_joint_poses.size())
         {
-          costs.push_back(computeWeldingCost(referencePose, pose));
+          costs.push_back(localWeldingCost);
           ++counter;
         }
 
